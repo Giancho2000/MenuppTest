@@ -35,11 +35,12 @@
         <div class=" items-center" v-for="img in pictures" v-bind:key="img">
           <div class="row" style="margin-bottom: 20px;">
             <div class="col">
-              <img style=" width: 100px; height: 100px; margin-right: 20px;" :src="img" alt="">
+              <img tag="download" id="myimg" style=" width: 100px; height: 100px; margin-right: 20px;" :src="img" alt="">
             </div>
             <div class="col">
-              <q-btn @click="downloadImg" label="Download" type="submit" color="primary"  />
-              <q-btn  style="margin-top: 15px;" label="Delete" type="submit" color="red" />
+              
+              <q-btn @click="downloadImg(img)" color="primary" ><a :href="img">descarga</a></q-btn>
+              <q-btn  @click="deleteImg(img)"  style="margin-top: 15px;" label="Delete" type="submit" color="red" />
             </div>
           </div>            
         </div>
@@ -55,7 +56,7 @@
 <script>
 import { defineComponent } from 'vue';
 import { getAuth, signOut } from "firebase/auth";
-import { getStorage, ref, uploadBytes, listAll, getDownloadURL  } from "firebase/storage";
+import { getStorage, ref, uploadBytes, listAll, getDownloadURL, deleteObject } from "firebase/storage";
 
 const storage = getStorage();
 const auth = getAuth();
@@ -89,7 +90,7 @@ export default defineComponent({
         res.prefixes.forEach((pictures) => {
         });
         res.items.forEach((img) => {
-          console.log(img);
+          //console.log(img);
           // All the items under listRef.
           getDownloadURL(ref(storage, img._location.path_))
           .then( (url) => {
@@ -111,39 +112,37 @@ export default defineComponent({
         console.log(error);
       });
     },
-    async downloadImg() {
-      const listRef = ref(storage, 'pictures');
-      await listAll(listRef)
-      .then((res) => {
-        res.prefixes.forEach((pictures) => {
-        });
-        res.items.forEach((img) => {
-          console.log(img);
-          // All the items under listRef.
-          getDownloadURL(ref(storage, img._location.path_))
-          .then( (url) => {
-            // `url` is the download URL for 'images/stars.jpg'
-            // This can be downloaded directly:
-            const xhr = new XMLHttpRequest();
-            xhr.responseType = 'blob';
-            xhr.onload = (event) => {
-              const blob = xhr.response;
-              console.log(blob);
-            };
-            xhr.open('GET', url);
-            xhr.send();
-
-            // Or inserted into an <img> element
-            const img = document.getElementById('myimg');
-            img.setAttribute('src', url);
-          });
-          
-        });
-      }).catch((error) => {
-        // Uh-oh, an error occurred!
+    downloadImg( img ) {
+      const imgRef = ref(storage, img);
+      console.log(imgRef);
+      getDownloadURL( imgRef )
+      .then(async(url) => {
+        console.log( url);
+        const xhr = new XMLHttpRequest();
+        xhr.responseType = 'blob';
+        xhr.onload = async (event) => {
+          console.log('Entro a descargar  ' + xhr);
+          const blob = await xhr.response;
+        };
+        await xhr.open('GET', url);
+        await xhr.send();         
+      })
+      .catch((error) => {
         console.log(error);
-      });
-    }
+      })
+    },
+    deleteImg(img) {
+      const imgRef = ref(storage, img);
+      deleteObject(imgRef).then(() => {
+        // File deleted successfully
+        window.deleteImg = this.deleteImg;
+        console.log('Se elimino bien');
+      }).catch((error) => {
+        // Uh-oh, an error occurred!C
+        console.log(error);
+      })
+    },
+    
   }
 }) 
 </script>
